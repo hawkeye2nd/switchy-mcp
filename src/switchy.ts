@@ -20,9 +20,7 @@ export interface SwitchyConfig {
 }
 
 export class SwitchyClient {
-  constructor(private cfg: SwitchyConfig) {
-    if (!cfg.apiToken) throw new Error("SWITCHY_API_TOKEN is required");
-  }
+  constructor(private cfg: SwitchyConfig) {}
 
   private headers(): Record<string, string> {
     const h: Record<string, string> = {
@@ -35,6 +33,11 @@ export class SwitchyClient {
   }
 
   private async request(url: string, init: RequestInit): Promise<unknown> {
+    if (!this.cfg.apiToken) {
+      throw new SwitchyError(
+        "SWITCHY_API_TOKEN is not configured on the server. Get one in Switchy: workspace Settings → Integrations → Generate a token.",
+      );
+    }
     const res = await fetch(url, {
       ...init,
       headers: { ...this.headers(), ...(init.headers as Record<string, string> | undefined) },

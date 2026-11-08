@@ -241,17 +241,19 @@ export function createServer(client: SwitchyClient) {
     {
       title: "List / search short links",
       description:
-        "List short links in the workspace, newest first. Optional `search` matches (case-insensitive) against the slug, destination URL and title. Optional filters for domain, folder and tag.",
+        "List short links in the workspace, newest first. Optional `search` matches (case-insensitive) against the slug, destination URL and title. Optional filters for domain, folder and tag. Returns a compact view (short_url, url, title, clicks, tags, dates, uniq); set detailed=true for every column, or pass `fields`.",
       inputSchema: {
         search: z.string().optional().describe("Text to look for in slug, URL or title"),
         domain: z.string().optional().describe("Only links on this domain"),
         folderId: z.number().int().optional(),
         tag: z.string().optional().describe("Only links carrying this tag"),
+        detailed: z.boolean().default(false).describe("Return every column (pixels, expiration, OG image, ...)"),
+        fields: z.array(z.string()).optional().describe("Exact columns to return (overrides detailed)"),
         ...paging,
       },
       annotations: { readOnlyHint: true },
     },
-    ({ search, domain, folderId, tag, limit, offset }) =>
+    ({ search, domain, folderId, tag, detailed, fields, limit, offset }) =>
       run(async () => {
         const { scalars } = await resolveTable("links");
         const names = new Set(scalars.map((f) => f.name));
@@ -266,13 +268,26 @@ export function createServer(client: SwitchyClient) {
         if (folderId !== undefined && names.has("folderId")) and.push({ folderId: { _eq: folderId } });
         if (tag && names.has("tags")) and.push({ tags: { _contains: [tag] } });
         const dateField = ["createdDate", "createdAt", "created_at"].find((n) => names.has(n));
-        return listRecords({
+        const compact = ["id", "domain", "uniq", "url", "title", "clicks", "tags", "folderId", "note", "createdDate"].filter(
+          (n) => names.has(n),
+        );
+        const result = await listRecords({
           table: "links",
           where: and.length ? { _and: and } : undefined,
           order_by: dateField ? [{ [dateField]: "desc" }] : undefined,
+          fields: fields?.length ? fields : detailed ? undefined : compact,
           limit,
           offset,
         });
+        result.rows = (result.rows as Record<string, unknown>[]).map((r) => {
+          const out: Record<string, unknown> = {};
+          if (typeof r.domain === "string" && typeof r.id === "string") out.short_url = `https://${r.domain}/${r.id}`;
+          for (const [k, v] of Object.entries(r)) {
+            if (detailed || fields?.length || (v !== null && !(Array.isArray(v) && v.length === 0))) out[k] = v;
+          }
+          return out;
+        });
+        return result;
       }),
   );
 
@@ -354,7 +369,7 @@ export function createServer(client: SwitchyClient) {
       description:
         "Update an existing link (PUT /v1/links/:uniqId or /v1/links/by-domain/:domain/:slug). Identify it with `uniqId`, or with `domain` + `slug`. Only pass fields you want to change; `url` is required by Switchy, so pass the current destination if unchanged.",
       inputSchema: {
-        uniqId: z.string().optional().describe("Link's unique id (from switchy_list_links)"),
+        uniqId: z.union([z.string(), z.number()]).optional().describe("The link's `uniq` number from switchy_list_links"),
         domain: z.string().optional().describe("Domain of the link (with slug)"),
         slug: z.string().optional().describe("Slug/id of the link on that domain (with domain)"),
         url: linkFields.url,
@@ -366,7 +381,7 @@ export function createServer(client: SwitchyClient) {
     ({ uniqId, domain, slug, autofill, ...rest }) =>
       run(() => {
         let target: { uniqId: string } | { domain: string; id: string };
-        if (uniqId) target = { uniqId };
+        if (uniqId !== undefined && uniqId !== "") target = { uniqId: String(uniqId) };
         else if (domain && slug) target = { domain, id: slug };
         else throw new Error("Provide either uniqId, or both domain and slug.");
         return client.updateLink(target, clean(rest), autofill);

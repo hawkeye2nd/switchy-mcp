@@ -1,0 +1,13 @@
+{
+  "name": "switchy-mcp",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "account_id": "ef82dd8d3c769963204e3197dc602b71",
+  "workers_dev": true,
+  "observability": { "enabled": true }
+  // Secrets (set with `wrangler secret put` or the dashboard):
+  //   MCP_ACCESS_KEY     – random string that guards the /mcp endpoint
+  //   SWITCHY_API_TOKEN  – Switchy workspace token (Settings → Integrations)
+  //   SWITCHY_PARTNER_TOKEN (optional)
+}

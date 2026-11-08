@@ -44,6 +44,26 @@ The read tools introspect the schema at runtime, so they pick up whatever column
    claude mcp add switchy -e SWITCHY_API_TOKEN=your-token -- node /absolute/path/to/switchy-mcp/dist/index.js
    ```
 
+## Remote (Cloudflare Workers)
+
+`src/worker.ts` serves the same tools as a remote MCP over Streamable HTTP. It's stateless and doesn't use Durable Objects.
+
+```bash
+npx wrangler deploy
+```
+```bash
+npx wrangler secret put MCP_ACCESS_KEY
+```
+```bash
+npx wrangler secret put SWITCHY_API_TOKEN
+```
+
+Connector URL: `https://switchy-mcp.<your-subdomain>.workers.dev/mcp/<MCP_ACCESS_KEY>`. You can also call `/mcp` with `Authorization: Bearer <MCP_ACCESS_KEY>`.
+
+`GET /health` shows whether the Switchy token is configured.
+
+Treat the connector URL like a password, because it contains the access key.
+
 ### Environment variables
 
 | Var | Required | Notes |

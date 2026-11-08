@@ -7,7 +7,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsc --watch",
-    "test": "npm run build && node test/smoke.mjs"
+    "test": "npm run build && node test/smoke.mjs",
+    "deploy": "wrangler deploy"
   },
   "license": "MIT",
   "dependencies": {
@@ -15,8 +16,10 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261108.1",
     "@types/node": "^26.6.6",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "wrangler": "^4.158.0"
   },
   "type": "module",
   "bin": {

@@ -14,6 +14,8 @@ if (!apiToken) {
 const client = new SwitchyClient({
   apiToken,
   partnerToken: process.env.SWITCHY_PARTNER_TOKEN || undefined,
+  graphqlUrl: process.env.SWITCHY_GRAPHQL_URL || undefined,
+  restBase: process.env.SWITCHY_API_URL || undefined,
 });
 
 const server = createServer(client);

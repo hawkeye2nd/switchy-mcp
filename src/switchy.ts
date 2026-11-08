@@ -1,8 +1,8 @@
 // Thin client for the Switchy API (https://developers.switchy.io).
 // Reads go through the GraphQL endpoint; link create/update go through REST.
 
-export const GRAPHQL_URL = process.env.SWITCHY_GRAPHQL_URL || "https://graphql.switchy.io/v1/graphql";
-export const REST_BASE = process.env.SWITCHY_API_URL || "https://api.switchy.io/v1";
+export const GRAPHQL_URL = "https://graphql.switchy.io/v1/graphql";
+export const REST_BASE = "https://api.switchy.io/v1";
 
 export class SwitchyError extends Error {
   constructor(message: string, public status?: number, public details?: unknown) {
@@ -15,6 +15,8 @@ export interface SwitchyConfig {
   apiToken: string;
   partnerToken?: string;
   timeoutMs?: number;
+  graphqlUrl?: string;
+  restBase?: string;
 }
 
 export class SwitchyClient {
@@ -58,7 +60,7 @@ export class SwitchyClient {
   }
 
   async graphql<T = unknown>(query: string, variables?: Record<string, unknown>): Promise<T> {
-    const body = (await this.request(GRAPHQL_URL, {
+    const body = (await this.request(this.cfg.graphqlUrl || GRAPHQL_URL, {
       method: "POST",
       body: JSON.stringify({ query, variables: variables ?? {} }),
     })) as { data?: T; errors?: unknown[] };
@@ -71,7 +73,7 @@ export class SwitchyClient {
   createLink(link: Record<string, unknown>, autofill?: boolean): Promise<unknown> {
     const payload: Record<string, unknown> = { link };
     if (autofill !== undefined) payload.autofill = autofill;
-    return this.request(`${REST_BASE}/links/create`, { method: "POST", body: JSON.stringify(payload) });
+    return this.request(`${this.cfg.restBase || REST_BASE}/links/create`, { method: "POST", body: JSON.stringify(payload) });
   }
 
   updateLink(
@@ -85,6 +87,6 @@ export class SwitchyClient {
         : `/links/by-domain/${encodeURIComponent(target.domain)}/${encodeURIComponent(target.id)}`;
     const payload: Record<string, unknown> = { link };
     if (autofill !== undefined) payload.autofill = autofill;
-    return this.request(`${REST_BASE}${path}`, { method: "PUT", body: JSON.stringify(payload) });
+    return this.request(`${this.cfg.restBase || REST_BASE}${path}`, { method: "PUT", body: JSON.stringify(payload) });
   }
 }
